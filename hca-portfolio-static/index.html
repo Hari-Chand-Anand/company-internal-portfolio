@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HCA Internal Portfolio</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="row">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">HCA Internal Portfolio</div>
+          <div class="subtitle">Sales catalogue portal (internal use)</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="machines.html">Machines</a>
+        <a href="projects.html">Projects</a>
+        <a href="map.html">Map</a>
+      </nav>
+      <div class="badge">HQ controlled • Live stock & price</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Quick access for sales teams</h1>
+      <p>
+        Use <b>Machines</b> to browse by brand & type and check stock/price.
+        Use <b>Projects</b> to show complete production solutions.
+        Use <b>Map</b> for proof of installations (no customer info).
+      </p>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section style="margin-top:14px" class="grid cols-3">
+      <a class="card" href="machines.html">
+        <h3>Machines</h3>
+        <p>Brand → Type → Model. Photos, video, catalog, live stock & price, and equivalents.</p>
+      </a>
+      <a class="card" href="projects.html">
+        <h3>Projects</h3>
+        <p>Pre-built production lines. Step-wise machines with quick open to video/catalog.</p>
+      </a>
+      <a class="card" href="map.html">
+        <h3>Map</h3>
+        <p>City/cluster view of where machines are running (aggregated, no customer names).</p>
+      </a>
+    </section>
+
+    <div class="footer">Internal use only • Data shown is for HCA team</div>
+  </main>
+
+  <script src="assets/app.js"></script>
+  <script>
+    (async () => {
+      const machines = await loadData('data/machines.json');
+      const projects = await loadData('data/projects.json');
+      const installs = await loadData('data/installations.json');
+
+      const totalMachines = machines.length;
+      const totalProjects = projects.length;
+      const totalInstalls = installs.reduce((s,i)=>s+(i.count||0),0);
+
+      const kpis = document.getElementById('kpis');
+      const items = [
+        {label:'Machines', value: totalMachines},
+        {label:'Projects', value: totalProjects},
+        {label:'Installations (agg.)', value: totalInstalls}
+      ];
+      kpis.innerHTML = items.map(x => `
+        <div class="kpi">
+          <div class="label">${safeText(x.label)}</div>
+          <div class="value">${safeText(x.value)}</div>
+        </div>
+      `).join('');
+    })().catch(err => {
+      console.error(err);
+      document.getElementById('kpis').innerHTML = '<div class="small">Failed to load data.</div>';
+    });
+  </script>
+</body>
+</html>

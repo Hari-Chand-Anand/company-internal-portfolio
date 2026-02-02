@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Machines • HCA Internal Portfolio</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="row">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">Machines</div>
+          <div class="subtitle">Browse by brand & type • Check stock & price</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="machines.html">Machines</a>
+        <a href="projects.html">Projects</a>
+        <a href="map.html">Map</a>
+      </nav>
+      <div class="badge">Internal use</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Machines library</h1>
+      <p>Filter by brand and type. Open a model to see media, live stock/price and equivalents.</p>
+    </section>
+
+    <div class="toolbar">
+      <input class="input" id="q" placeholder="Search model (e.g., R9, A1)" />
+      <select id="brand"></select>
+      <select id="type"></select>
+      <button class="btn" id="clear">Clear</button>
+      <span class="small" id="count"></span>
+    </div>
+
+    <section class="grid cols-3" id="list"></section>
+
+    <div class="footer">Internal use only • Prices shown are for HCA sales team</div>
+  </main>
+
+  <script src="assets/app.js"></script>
+  <script>
+    (async () => {
+      const machines = await loadData('data/machines.json');
+
+      const q = $('#q');
+      const brandSel = $('#brand');
+      const typeSel = $('#type');
+      const list = $('#list');
+      const count = $('#count');
+
+      const brands = ['All brands', ...Array.from(new Set(machines.map(m => m.brand))).sort()];
+      const types  = ['All types', ...Array.from(new Set(machines.map(m => m.type))).sort()];
+
+      brandSel.innerHTML = brands.map(b => `<option value="${safeText(b)}">${safeText(b)}</option>`).join('');
+      typeSel.innerHTML  = types.map(t => `<option value="${safeText(t)}">${safeText(t)}</option>`).join('');
+
+      function render(){
+        const term = (q.value || '').trim().toLowerCase();
+        const b = brandSel.value;
+        const t = typeSel.value;
+
+        const filtered = machines.filter(m => {
+          if (b !== 'All brands' && m.brand !== b) return false;
+          if (t !== 'All types' && m.type !== t) return false;
+          if (!term) return true;
+          return (m.model||'').toLowerCase().includes(term) || (m.id||'').toLowerCase().includes(term);
+        });
+
+        count.textContent = `${filtered.length} model(s)`;
+
+        list.innerHTML = filtered.map(m => {
+          const pill = stockPill(m.stockQty);
+          return `
+            <a class="card" href="machine.html?id=${encodeURIComponent(m.id)}">
+              <h3>${safeText(m.brand)} • ${safeText(m.model)}</h3>
+              <p>${safeText(m.short || '')}</p>
+              <div class="divider"></div>
+              <div class="meta">
+                <span class="pill"><span class="dot ${pill.cls}"></span>${safeText(pill.label)}</span>
+                <span class="pill">${moneyINR(m.priceINR)}</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+      }
+
+      q.addEventListener('input', render);
+      brandSel.addEventListener('change', render);
+      typeSel.addEventListener('change', render);
+      $('#clear').addEventListener('click', () => { q.value=''; brandSel.value='All brands'; typeSel.value='All types'; render(); q.focus(); });
+
+      render();
+    })().catch(err => {
+      console.error(err);
+      $('#list').innerHTML = '<div class="card"><h3>Error</h3><p>Failed to load machines data.</p></div>';
+    });
+  </script>
+</body>
+</html>

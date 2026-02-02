@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Map • HCA Internal Portfolio</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <!-- Leaflet via CDN (simple for internal portal) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="row">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">Installations Map</div>
+          <div class="subtitle">Aggregated view (no customer info)</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="machines.html">Machines</a>
+        <a href="projects.html">Projects</a>
+        <a href="map.html">Map</a>
+      </nav>
+      <div class="badge">Internal use</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Where machines are running</h1>
+      <p>
+        This map shows installations by city/cluster only. No customer names, addresses, or contacts.
+        Use filters to quickly answer: “Where is this model running in India?”
+      </p>
+    </section>
+
+    <div class="toolbar">
+      <select id="machine"></select>
+      <button class="btn" id="reset">Reset</button>
+      <span class="small" id="hint"></span>
+    </div>
+
+    <div id="map" role="application" aria-label="Installations map"></div>
+
+    <div class="footer">Map uses OpenStreetMap tiles via Leaflet (CDN).</div>
+  </main>
+
+  <script src="assets/app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    (async () => {
+      const machines = await loadData('data/machines.json');
+      const installs = await loadData('data/installations.json');
+
+      const sel = $('#machine');
+      sel.innerHTML = ['All machines', ...machines.map(m => `${m.id} — ${m.brand} ${m.model}`)]
+        .map((x,i) => `<option value="${i===0?'ALL':safeText(x.split(' — ')[0])}">${safeText(x)}</option>`)
+        .join('');
+
+      const map = L.map('map', { scrollWheelZoom: true }).setView([22.9734, 78.6569], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      let markers = [];
+      function clearMarkers(){ markers.forEach(m => map.removeLayer(m)); markers = []; }
+
+      function render(machineId){
+        clearMarkers();
+        const rows = installs.filter(x => machineId==='ALL' ? true : x.machineId===machineId);
+        $('#hint').textContent = machineId==='ALL' ? `${rows.length} location rows` : `${rows.length} locations for ${machineId}`;
+
+        rows.forEach(x => {
+          const m = machines.find(mm => mm.id === x.machineId);
+          const label = m ? `${m.brand} ${m.model}` : x.machineId;
+          const mk = L.circleMarker([x.lat, x.lng], {
+            radius: Math.min(18, 6 + (x.count || 1)),
+            weight: 1,
+            opacity: 0.9,
+            fillOpacity: 0.35
+          }).addTo(map);
+
+          mk.bindPopup(`
+            <b>${safeText(label)}</b><br/>
+            ${safeText(x.city)}, ${safeText(x.state)}<br/>
+            Installations (agg.): <b>${safeText(x.count || 0)}</b><br/>
+            <a href="machine.html?id=${encodeURIComponent(x.machineId)}">Open machine</a>
+          `);
+          markers.push(mk);
+        });
+      }
+
+      sel.addEventListener('change', () => render(sel.value));
+      $('#reset').addEventListener('click', () => { sel.value='ALL'; render('ALL'); });
+
+      render('ALL');
+
+    })().catch(err => {
+      console.error(err);
+      $('#hint').textContent = 'Failed to load map data.';
+    });
+  </script>
+</body>
+</html>

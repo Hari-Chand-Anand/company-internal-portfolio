@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Machine • HCA Internal Portfolio</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <!-- 3D model viewer (GLB) -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="row">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title" id="mtitle">Machine</div>
+          <div class="subtitle" id="msub">Details, media, stock/price and equivalents</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="machines.html">Machines</a>
+        <a href="projects.html">Projects</a>
+        <a href="map.html">Map</a>
+      </nav>
+      <button class="btn primary" id="copy">Copy link</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1 id="h1">Loading…</h1>
+      <p id="desc"></p>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section style="margin-top:14px" class="grid cols-2">
+      <div class="card">
+        <h3>Quick actions</h3>
+        <p class="small">Use these during customer visits.</p>
+        <div class="divider"></div>
+        <div class="actions" id="actions"></div>
+      </div>
+
+      <div class="card">
+        <h3>Equivalents / Alternatives</h3>
+        <p class="small">Similar machines across brands with live stock & price.</p>
+        <div class="divider"></div>
+        <div id="equivs"></div>
+      </div>
+    </section>
+
+    <section style="margin-top:14px" class="card">
+      <h3>Notes</h3>
+      <p class="small">You can expand this later to show full specs table, spares, and comparison view.</p>
+    </section>
+
+    <div class="footer">Internal use only</div>
+  </main>
+
+  <script src="assets/app.js"></script>
+
+  <!-- 3D Viewer Modal (opens inside the same page) -->
+  <div id="viewerModal" class="mv-modal" aria-hidden="true">
+    <div class="mv-backdrop" id="close3dBackdrop"></div>
+    <div class="mv-panel" role="dialog" aria-modal="true" aria-label="3D Viewer">
+      <div class="mv-header">
+        <div class="mv-title">3D View</div>
+        <button class="mv-close" id="close3dBtn" type="button">✕</button>
+      </div>
+
+      <model-viewer
+        id="mv"
+        src="assets/machine.glb"
+        alt="Machine 3D model"
+        camera-controls
+        auto-rotate
+        shadow-intensity="1"
+        exposure="1"
+        environment-image="neutral"
+        style="width:100%; height:100%; background:#0b0f17;">
+      </model-viewer>
+    </div>
+  </div>
+
+  <!-- Catalog Viewer Modal (opens inside the same page) -->
+  <div id="catalogModal" class="mv-modal" aria-hidden="true">
+    <div class="mv-backdrop" id="closeCatalogBackdrop"></div>
+    <div class="mv-panel" role="dialog" aria-modal="true" aria-label="Catalog Viewer">
+      <div class="mv-header">
+        <div class="mv-title" id="catalogTitle">Catalog</div>
+        <button class="mv-close" id="closeCatalogBtn" type="button">✕</button>
+      </div>
+
+      <iframe
+        id="catalogFrame"
+        title="Catalog PDF"
+        src=""
+        loading="lazy"
+        style="width:100%; height:100%; border:0; background:#fff;"
+        allow="fullscreen">
+      </iframe>
+    </div>
+  </div>
+
+  <script>
+    // ---- helper: detect backend URL in Codespaces + local ----
+    function getApiBase() {
+      // Codespaces pattern: https://<name>-5500.app.github.dev
+      // Backend pattern:   https://<name>-3001.app.github.dev
+      const host = location.host;
+      const m = host.match(/-(\d+)\.app\.github\.dev$/);
+      if (m) {
+        return location.origin.replace(/-\d+\.app\.github\.dev$/, "-3001.app.github.dev");
+      }
+      // Local / normal
+      return `${location.protocol}//${location.hostname}:3001`;
+    }
+
+    async function fetchJson(url, opts) {
+      const res = await fetch(url, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
+      return data;
+    }
+
+    (async () => {
+      const API = getApiBase();
+
+      const id = getParam('id');
+      const machines = await loadData('data/machines.json');
+      const mById = new Map(machines.map(m => [m.id, m]));
+
+      const m = mById.get(id) || machines[0];
+      if (!m) throw new Error('No machine found');
+
+      // Clean brand/model so it matches Excel key
+      const cleanBrand = String(m.brand || "")
+        .replace(/[•·]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const cleanModel = String(m.model || "")
+        .replace(/\(.*?\)/g, "")   // removes (R-Nine)
+        .replace(/[•·]/g, " ")     // removes bullets if any
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const MODEL_KEY = `${cleanBrand} ${cleanModel}`.trim();
+      console.log("MODEL_KEY sent to backend:", MODEL_KEY);
+
+      document.title = `${m.brand} ${m.model} • Machines`;
+      $('#mtitle').textContent = `${m.brand} • ${m.model}`;
+      $('#h1').textContent = `${m.brand} • ${m.model}`;
+      $('#desc').textContent = m.short || '';
+
+      // KPI layout with placeholders we will update
+      $('#kpis').innerHTML = [
+        { label: 'Brand', value: m.brand },
+        { label: 'Type', value: m.type },
+        { label: 'Price', value: 'Loading…', id: 'kpiPrice' }
+      ].map(x => `
+        <div class="kpi">
+          <div class="label">${safeText(x.label)}</div>
+          <div class="value" ${x.id ? `id="${x.id}"` : ''}>${safeText(x.value)}</div>
+        </div>
+      `).join('');
+
+      // Admin-only box (hidden by default)
+      const adminBoxHtml = `
+        <div id="adminPriceBox" class="card" style="margin-top:12px; display:none;">
+          <h3 style="margin:0 0 6px 0;">Admin pricing</h3>
+          <div class="small">Visible only after login.</div>
+          <div class="divider"></div>
+          <div class="meta" style="gap:10px; flex-wrap:wrap;">
+            <span class="pill">Base Price: <b id="basePriceVal">—</b></span>
+            <span class="pill">FX_OVERRIDE: <b id="fxOverrideVal">—</b></span>
+          </div>
+        </div>
+      `;
+      $('#kpis').insertAdjacentHTML('afterend', adminBoxHtml);
+
+      // Actions: Catalog is a button (no new tab)
+      $('#actions').innerHTML = `
+        <a href="${safeText(m.videoUrl)}" target="_blank" rel="noreferrer">Video</a>
+        <button type="button" id="openCatalogBtn">Catalog</button>
+        <button type="button" id="open3dBtn">View 3D</button>
+        <button type="button" id="adminLoginBtn">Admin Login</button>
+        <a href="machines.html">Back to list</a>
+      `;
+
+      // ---- 1) Load public quote price and update KPI ----
+      async function loadPublicPrice() {
+        const url = `${API}/api/price/${encodeURIComponent(MODEL_KEY)}`;
+        console.log("Calling public price URL:", url);
+
+        try {
+          const res = await fetch(url);
+          const text = await res.text();
+
+          console.log("Status:", res.status);
+          console.log("Raw response:", text);
+
+          if (!res.ok) {
+            $('#kpiPrice').textContent = `ERR ${res.status}`;
+            return;
+          }
+
+          const data = JSON.parse(text);
+          const q = data.quote_price_inr;
+          $('#kpiPrice').textContent = q ? moneyINR(Number(q)) : "—";
+        } catch (e) {
+          console.error("Fetch failed:", e);
+          $('#kpiPrice').textContent = "FETCH FAIL";
+        }
+      }
+
+      // ---- 2) Admin login (minimal password prompt) ----
+      async function adminLogin() {
+        const password = prompt("Enter admin password");
+        if (!password) return;
+
+        try {
+          const data = await fetchJson(`${API}/api/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password })
+          });
+
+          localStorage.setItem("hca_admin_token", data.token);
+          alert("Admin access enabled ✅");
+          await loadAdminPrice();
+        } catch (e) {
+          alert("Wrong password ❌");
+        }
+      }
+
+      // ---- 3) Load admin-only fields (Base + FX_OVERRIDE) ----
+      async function loadAdminPrice() {
+        const token = localStorage.getItem("hca_admin_token");
+        if (!token) {
+          $('#adminPriceBox').style.display = "none";
+          return;
+        }
+
+        try {
+          const data = await fetchJson(`${API}/api/admin/price/${encodeURIComponent(MODEL_KEY)}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          $('#adminPriceBox').style.display = "block";
+          $('#basePriceVal').textContent = data.base_price ?? "—";
+          $('#fxOverrideVal').textContent = data.fx_override ?? "—";
+        } catch (e) {
+          $('#adminPriceBox').style.display = "none";
+        }
+      }
+
+      // bind admin login
+      $('#adminLoginBtn').addEventListener('click', adminLogin);
+
+      // ---- 3D Viewer ----
+      const modal3d = $('#viewerModal');
+      const mv = $('#mv');
+      const open3dBtn = $('#open3dBtn');
+      const close3dBtn = $('#close3dBtn');
+      const close3dBackdrop = $('#close3dBackdrop');
+
+      const glbSrc = (m && m.glbUrl) ? m.glbUrl : 'assets/machine.glb';
+      mv.setAttribute('src', glbSrc);
+
+      const open3d = () => {
+        modal3d.classList.add('is-open');
+        modal3d.setAttribute('aria-hidden', 'false');
+      };
+      const close3d = () => {
+        modal3d.classList.remove('is-open');
+        modal3d.setAttribute('aria-hidden', 'true');
+      };
+
+      open3dBtn.addEventListener('click', open3d);
+      close3dBtn.addEventListener('click', close3d);
+      close3dBackdrop.addEventListener('click', close3d);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal3d.classList.contains('is-open')) close3d();
+      });
+
+      // ---- Catalog Viewer (catalogUrl only; Drive view -> preview) ----
+      const catalogModal = $('#catalogModal');
+      const catalogFrame = $('#catalogFrame');
+      const openCatalogBtn = $('#openCatalogBtn');
+      const closeCatalogBtn = $('#closeCatalogBtn');
+      const closeCatalogBackdrop = $('#closeCatalogBackdrop');
+      const catalogTitle = $('#catalogTitle');
+
+      function toPreview(url) {
+        if (!url) return "";
+        const s = String(url);
+
+        // If already preview link, keep it
+        if (s.includes("/preview")) return s;
+
+        // Convert Google Drive "file/d/<id>/view" to ".../preview"
+        const match = s.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+        if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+        // Otherwise use as-is (direct PDF URL also works)
+        return s;
+      }
+
+      function openCatalog() {
+        const src = toPreview(m.catalogUrl);
+        if (!src) {
+          alert("Catalog not available for this machine.");
+          return;
+        }
+        catalogTitle.textContent = `${m.brand} • ${m.model} Catalog`;
+        catalogFrame.src = src;
+
+        catalogModal.classList.add('is-open');
+        catalogModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeCatalog() {
+        catalogModal.classList.remove('is-open');
+        catalogModal.setAttribute('aria-hidden', 'true');
+        catalogFrame.src = ""; // unload
+      }
+
+      openCatalogBtn.addEventListener('click', openCatalog);
+      closeCatalogBtn.addEventListener('click', closeCatalog);
+      closeCatalogBackdrop.addEventListener('click', closeCatalog);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && catalogModal.classList.contains('is-open')) closeCatalog();
+      });
+
+      // Equivalents
+      const equivWrap = $('#equivs');
+      if (!m.equivalents || !m.equivalents.length) {
+        equivWrap.innerHTML = '<div class="small">No equivalents mapped yet.</div>';
+      } else {
+        equivWrap.innerHTML = m.equivalents.map(eid => {
+          const e = mById.get(eid);
+          if (!e) return `<div class="small">Unknown machine ID: ${safeText(eid)}</div>`;
+          const p = stockPill(e.stockQty);
+          return `
+            <a class="card" style="display:block; margin-bottom:10px" href="machine.html?id=${encodeURIComponent(e.id)}">
+              <h3>${safeText(e.brand)} • ${safeText(e.model)}</h3>
+              <p>${safeText(e.short || '')}</p>
+              <div class="divider"></div>
+              <div class="meta">
+                <span class="pill"><span class="dot ${p.cls}"></span>${safeText(p.label)}</span>
+                <span class="pill">${moneyINR(e.priceINR)}</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+      }
+
+      // Copy link
+      $('#copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(location.href);
+          $('#copy').textContent = 'Copied ✓';
+          setTimeout(() => $('#copy').textContent = 'Copy link', 1200);
+        } catch {
+          alert('Copy failed. You can copy from browser address bar.');
+        }
+      });
+
+      // Load prices
+      await loadPublicPrice();
+      await loadAdminPrice();
+
+    })().catch(err => {
+      console.error(err);
+      $('#h1').textContent = 'Machine not found';
+      $('#desc').textContent = 'Check the URL or machines.json.';
+    });
+  </script>
+</body>
+</html>

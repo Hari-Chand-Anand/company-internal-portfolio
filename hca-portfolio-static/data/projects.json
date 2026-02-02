@@ -1,0 +1,146 @@
+[
+  {
+    "id": "cap-making-line",
+    "title": "Cap Making Line",
+    "summary": "End-to-end machine set typically used for cap manufacturing (panel prep → joining → embroidery → finishing).",
+    "hero": "assets/placeholders/project.svg",
+    "steps": [
+      {
+        "no": 1,
+        "title": "Panel preparation & marking",
+        "description": "Prepare cap panels, attach interlining (if required), and mark stitching/embroidery positions.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Top-stitching and precision seams"}
+        ]
+      },
+      {
+        "no": 2,
+        "title": "Panel joining",
+        "description": "Join multiple panels with consistent seam allowance and clean finishing.",
+        "machines": [
+          {"machineId":"DUKE-H1","role":"Overlock for seam edge finishing (if needed)"},
+          {"machineId":"DUKE-R9","role":"Main joining seams"}
+        ]
+      },
+      {
+        "no": 3,
+        "title": "Embroidery / logo application",
+        "description": "Apply branding and decorative stitching.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Support stitching / attach labels"}
+        ]
+      },
+      {
+        "no": 4,
+        "title": "Finishing & QC",
+        "description": "Final stitch checks, trimming, cleanup and quality control.",
+        "machines": [
+          {"machineId":"BRANDX-LS-A1","role":"Alternate lockstitch option for finishing operations"}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "polo-tshirt-line",
+    "title": "Polo T‑Shirt Line",
+    "summary": "Typical machine set for polo production: placket, collar, sleeves, hemming and finishing.",
+    "hero": "assets/placeholders/project.svg",
+    "steps": [
+      {
+        "no": 1,
+        "title": "Placket preparation",
+        "description": "Fold, stitch and prepare the placket with consistency.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Accurate lockstitch for placket"}
+        ]
+      },
+      {
+        "no": 2,
+        "title": "Body assembly",
+        "description": "Join shoulder, sleeves, side seams.",
+        "machines": [
+          {"machineId":"DUKE-H1","role":"Overlock for knit seams"}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "denim-jeans-line",
+    "title": "Denim / Jeans Manufacturing Line",
+    "summary": "Step-wise denim/jeans line mapping (waistband → pockets → reinforcement → hems → trims → decorative pocket design). Includes a denim deck PDF reference.",
+    "hero": "assets/placeholders/project.svg",
+    "resources": [
+      {
+        "label": "Denim Deck (Google Drive)",
+        "url": "https://drive.google.com/file/d/15HYtSjadPVpYWhElxzdbUJGrZ2BIhCOW/view?usp=sharing"
+      }
+    ],
+    "steps": [
+      {
+        "no": 1,
+        "title": "Waistband preparation",
+        "description": "Fusing/interlining (if required), topstitching and shaping.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Topstitching on waistband"}
+        ]
+      },
+      {
+        "no": 2,
+        "title": "Front pocket preparation",
+        "description": "Pocket bag assembly, pocket mouth stitching.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Pocket mouth & pocket bag seams"}
+        ]
+      },
+      {
+        "no": 3,
+        "title": "Back pocket & decorative stitching",
+        "description": "Back pocket preparation and decorative stitch pattern.",
+        "machines": [
+          {"machineId":"BRANDX-LS-A1","role":"Decorative stitches / back pocket"}
+        ]
+      },
+      {
+        "no": 4,
+        "title": "Bartack reinforcement",
+        "description": "Reinforce stress points: pocket corners, fly, belt loops.",
+        "machines": [
+          {"machineId":"DUKE-H1","role":"(Placeholder) Replace with your bartack model"}
+        ]
+      },
+      {
+        "no": 5,
+        "title": "Side seams & inseam assembly",
+        "description": "Join panels and assemble the legs.",
+        "machines": [
+          {"machineId":"DUKE-H1","role":"Overlock/edge finishing (if used)"},
+          {"machineId":"DUKE-R9","role":"Main seams"}
+        ]
+      },
+      {
+        "no": 6,
+        "title": "Hem finishing",
+        "description": "Bottom hem stitching and edge finishing.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Hem topstitching"}
+        ]
+      },
+      {
+        "no": 7,
+        "title": "Trims & labels",
+        "description": "Attach labels, rivets (if applicable), and final trims.",
+        "machines": [
+          {"machineId":"BRANDX-LS-A1","role":"Label stitching"}
+        ]
+      },
+      {
+        "no": 8,
+        "title": "Final QC",
+        "description": "Check stitches, measurements, and finish quality.",
+        "machines": [
+          {"machineId":"DUKE-R9","role":"Final fixes and touch-ups"}
+        ]
+      }
+    ]
+  }
+]
