@@ -3,104 +3,291 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link href="https://fonts.cdnfonts.com/css/ikaros" rel="stylesheet">
+
   <title>Machines • HCA Internal Portfolio</title>
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
-<body>
-  <header class="topbar">
-    <div class="row">
-      <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <div>
-          <div class="title">Machines</div>
-          <div class="subtitle">Browse by brand & type • Check stock & price</div>
-        </div>
-      </div>
-      <nav class="nav" aria-label="Primary">
-        <a href="index.html">Home</a>
-        <a href="machines.html">Machines</a>
-        <a href="projects.html">Projects</a>
-        <a href="map.html">Map</a>
-      </nav>
-      <div class="badge">Internal use</div>
-    </div>
-  </header>
 
-  <main class="container">
-    <section class="hero">
-      <h1>Machines library</h1>
-      <p>Filter by brand and type. Open a model to see media, live stock/price and equivalents.</p>
+<body class="vanta-on">
+  <!-- Vanta background mount -->
+  <div id="vanta-bg" aria-hidden="true"></div>
+
+  <main class="container page">
+    <section class="hero" id="hero">
+      <h1 id="heroH1">Machines library</h1>
+      <!-- Optional: you can re-enable heroP if you want -->
+      <!-- <p id="heroP"></p> -->
     </section>
 
-    <div class="toolbar">
-      <input class="input" id="q" placeholder="Search model (e.g., R9, A1)" />
-      <select id="brand"></select>
+    <div class="toolbar" id="toolbar">
+      <input class="input" id="q" placeholder="Search model (e.g., DY-1201, DY-SK)" />
       <select id="type"></select>
       <button class="btn" id="clear">Clear</button>
+      <a class="btn" id="backToBrands" href="machines.html" style="display:none;">← Back to brands</a>
       <span class="small" id="count"></span>
     </div>
 
-    <section class="grid cols-3" id="list"></section>
+    <!-- Brand cards or machine cards will render here -->
+    <section id="list" class="grid cols-3"></section>
 
-    <div class="footer">Internal use only • Prices shown are for HCA sales team</div>
+    <div class="footer"></div>
   </main>
 
   <script src="assets/app.js"></script>
+
   <script>
     (async () => {
-      const machines = await loadData('data/machines.json');
+      const FORCED_BRAND = "DUKEJIA";
 
-      const q = $('#q');
-      const brandSel = $('#brand');
-      const typeSel = $('#type');
       const list = $('#list');
       const count = $('#count');
+      const q = $('#q');
+      const typeSel = $('#type');
+      const backToBrands = $('#backToBrands');
 
-      const brands = ['All brands', ...Array.from(new Set(machines.map(m => m.brand))).sort()];
-      const types  = ['All types', ...Array.from(new Set(machines.map(m => m.type))).sort()];
-
-      brandSel.innerHTML = brands.map(b => `<option value="${safeText(b)}">${safeText(b)}</option>`).join('');
-      typeSel.innerHTML  = types.map(t => `<option value="${safeText(t)}">${safeText(t)}</option>`).join('');
-
-      function render(){
-        const term = (q.value || '').trim().toLowerCase();
-        const b = brandSel.value;
-        const t = typeSel.value;
-
-        const filtered = machines.filter(m => {
-          if (b !== 'All brands' && m.brand !== b) return false;
-          if (t !== 'All types' && m.type !== t) return false;
-          if (!term) return true;
-          return (m.model||'').toLowerCase().includes(term) || (m.id||'').toLowerCase().includes(term);
-        });
-
-        count.textContent = `${filtered.length} model(s)`;
-
-        list.innerHTML = filtered.map(m => {
-          const pill = stockPill(m.stockQty);
-          return `
-            <a class="card" href="machine.html?id=${encodeURIComponent(m.id)}">
-              <h3>${safeText(m.brand)} • ${safeText(m.model)}</h3>
-              <p>${safeText(m.short || '')}</p>
-              <div class="divider"></div>
-              <div class="meta">
-                <span class="pill"><span class="dot ${pill.cls}"></span>${safeText(pill.label)}</span>
-                <span class="pill">${moneyINR(m.priceINR)}</span>
-              </div>
-            </a>
-          `;
-        }).join('');
+      function getBrandParam() {
+        const u = new URL(location.href);
+        return (u.searchParams.get('brand') || '').trim();
       }
 
-      q.addEventListener('input', render);
-      brandSel.addEventListener('change', render);
-      typeSel.addEventListener('change', render);
-      $('#clear').addEventListener('click', () => { q.value=''; brandSel.value='All brands'; typeSel.value='All types'; render(); q.focus(); });
+      // --- Robust fetch that works on GitHub Pages + subfolders ---
+      async function fetchJsonWithFallback(paths) {
+        const tried = [];
+        for (const url of paths) {
+          try {
+            tried.push(url);
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) continue;
+            return { data: await res.json(), tried, okUrl: url };
+          } catch (e) {
+            // continue trying next path
+          }
+        }
+        const err = new Error("Failed to load products.json");
+        err.tried = tried;
+        throw err;
+      }
 
-      render();
+      function guessRepoBase() {
+        // If hosted at /repo-name/..., base is "/repo-name"
+        const parts = location.pathname.split("/").filter(Boolean);
+        if (parts.length >= 2) return "/" + parts[0];
+        return "";
+      }
+
+      async function loadProducts() {
+        const repoBase = guessRepoBase();
+
+        const candidates = [
+          "./products.json",
+          "products.json",
+          "./assets/products.json",
+          "assets/products.json",
+          (repoBase ? `${repoBase}/products.json` : null),
+          (repoBase ? `${repoBase}/assets/products.json` : null),
+        ].filter(Boolean);
+
+        const { data } = await fetchJsonWithFallback(candidates);
+
+        // Deduplicate by id
+        const seen = new Set();
+        const unique = [];
+        for (const p of data) {
+          const id = String(p.id || "").trim();
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          unique.push(p);
+        }
+
+        // Force brand DUKEJIA + map type
+        return unique.map(p => ({
+          id: p.id,
+          brand: FORCED_BRAND,
+          model: p.model || "",
+          short: p.description || "",
+          type: p.operation || p.category || "Machine",
+          thumbnail: p.thumbnail || "",
+          priceINR: p.priceINR,
+          stockQty: p.stockQty
+        }));
+      }
+
+      function renderBrandsView(machines) {
+        $('#heroH1').textContent = "BRANDS";
+
+        backToBrands.style.display = "none";
+        q.style.display = "none";
+        typeSel.style.display = "none";
+        $('#clear').style.display = "none";
+        count.textContent = "";
+
+        // Brand cards grid
+        list.classList.remove('grid', 'cols-3');
+        list.classList.add('brands-grid');
+
+        // NOTE: Home button should be in the TOP hero card (your request).
+        // Add it on the right side without changing layout:
+        // If you have no heroP in HTML, we’ll inject a small right-aligned link inside hero.
+        const hero = $('#hero');
+        if (!hero.querySelector('.hero-right')) {
+          const right = document.createElement('div');
+          right.className = 'hero-right';
+          right.innerHTML = `<a class="hero-home" href="index.html">Home</a>`;
+          hero.appendChild(right);
+        }
+
+        list.innerHTML = `
+          <div class="brand-card" data-href="machines.html?brand=${encodeURIComponent(FORCED_BRAND)}">
+            <div class="brand-inner">
+              <div class="brand-text">
+                <div class="brand-title">${safeText(FORCED_BRAND)}</div>
+                <div class="brand-meta">${safeText(machines.length)} machines available</div>
+                <div class="brand-cta">Open →</div>
+              </div>
+              <div class="brand-arrow">→</div>
+            </div>
+          </div>
+        `;
+
+        const card = list.querySelector('.brand-card');
+        card.addEventListener('click', () => {
+          location.href = card.getAttribute('data-href');
+        });
+      }
+
+      function renderBrandDetail(machines, brand) {
+        $('#heroH1').textContent = brand;
+
+        // Ensure Home button remains in hero-right (if injected already)
+        const hero = $('#hero');
+        if (!hero.querySelector('.hero-right')) {
+          const right = document.createElement('div');
+          right.className = 'hero-right';
+          right.innerHTML = `<a class="hero-home" href="index.html">Home</a>`;
+          hero.appendChild(right);
+        }
+
+        backToBrands.style.display = "";
+        q.style.display = "";
+        typeSel.style.display = "";
+        $('#clear').style.display = "";
+
+        // switch back to machine grid
+        list.classList.remove('brands-grid');
+        list.classList.add('grid', 'cols-3');
+
+        const brandMachines = machines.filter(m => m.brand === brand);
+        const allTypes = ['All types', ...Array.from(new Set(brandMachines.map(m => m.type))).filter(Boolean).sort()];
+        typeSel.innerHTML = allTypes.map(t => `<option value="${safeText(t)}">${safeText(t)}</option>`).join('');
+
+        function render() {
+          const term = (q.value || '').trim().toLowerCase();
+          const t = typeSel.value;
+
+          const filtered = brandMachines.filter(m => {
+            if (t !== 'All types' && m.type !== t) return false;
+            if (!term) return true;
+            return (m.model || '').toLowerCase().includes(term)
+              || (m.id || '').toLowerCase().includes(term);
+          });
+
+          count.textContent = `${filtered.length} model(s)`;
+          filtered.sort((a,b) => String(a.model||'').localeCompare(String(b.model||'')));
+
+          list.innerHTML = filtered.map(m => {
+            const price = (m.priceINR != null) ? moneyINR(Number(m.priceINR)) : "—";
+            const qty = (m.stockQty != null) ? Number(m.stockQty) : 0;
+            const pill = stockPill(qty);
+
+            return `
+              <a class="card" href="machine.html?id=${encodeURIComponent(m.id)}">
+                <h3>${safeText(m.brand)} • ${safeText(m.model)}</h3>
+                <p>${safeText(m.short || '')}</p>
+                <div class="divider"></div>
+                <div class="meta">
+                  <span class="pill"><span class="dot ${pill.cls}"></span>${safeText(pill.label)}: ${safeText(qty)}</span>
+                  <span class="pill">${safeText(price)}</span>
+                </div>
+              </a>
+            `;
+          }).join('');
+
+          if (!filtered.length) {
+            list.innerHTML = `
+              <div class="card">
+                <h3>No results</h3>
+                <p>Try clearing search/type filters.</p>
+              </div>
+            `;
+          }
+        }
+
+        q.addEventListener('input', render);
+        typeSel.addEventListener('change', render);
+        $('#clear').addEventListener('click', () => {
+          q.value = '';
+          typeSel.value = 'All types';
+          render();
+          q.focus();
+        });
+
+        render();
+      }
+
+      const machines = await loadProducts();
+      const brand = getBrandParam();
+
+      if (!brand) {
+        renderBrandsView(machines);
+      } else {
+        if (brand !== FORCED_BRAND) {
+          location.href = "machines.html";
+          return;
+        }
+        renderBrandDetail(machines, brand);
+      }
+
     })().catch(err => {
       console.error(err);
-      $('#list').innerHTML = '<div class="card"><h3>Error</h3><p>Failed to load machines data.</p></div>';
+
+      const tried = (err && err.tried) ? err.tried : [];
+      const triedHtml = tried.length
+        ? `<p class="small" style="margin-top:10px; opacity:.75;">Tried: ${tried.map(s => `<code>${s}</code>`).join(" , ")}</p>`
+        : "";
+
+      $('#list').innerHTML = `
+        <div class="card">
+          <h3>Error</h3>
+          <p>Failed to load products.json.</p>
+          ${triedHtml}
+          <p class="small" style="margin-top:10px; opacity:.75;">
+            Fix: ensure <code>products.json</code> is deployed next to <code>machines.html</code> (or in <code>/assets/</code>), and open the site via an HTTP server (not file://).
+          </p>
+        </div>
+      `;
+    });
+  </script>
+
+  <!-- Vanta NET -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+  <script>
+    VANTA.NET({
+      el: "#vanta-bg",
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      color: 0x6aa7ff,
+      backgroundColor: 0x050712,
+      points: 9.0,
+      maxDistance: 18.0,
+      spacing: 14.0,
+      showDots: false
     });
   </script>
 </body>

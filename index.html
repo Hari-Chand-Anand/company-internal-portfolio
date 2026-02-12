@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-  <header class="topbar">
+  <!--<header class="topbar">
     <div class="row">
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
@@ -24,64 +24,73 @@
       </nav>
       <div class="badge">HQ controlled • Live stock & price</div>
     </div>
-  </header>
+  </header>-->
 
-  <main class="container">
-    <section class="hero">
-      <h1>Quick access for sales teams</h1>
-      <p>
-        Use <b>Machines</b> to browse by brand & type and check stock/price.
-        Use <b>Projects</b> to show complete production solutions.
-        Use <b>Map</b> for proof of installations (no customer info).
-      </p>
-      <div class="kpis" id="kpis"></div>
-    </section>
+  <main class="container home">
+  <!-- Vanta background mount (behind everything) -->
+  <div id="vanta-bg" aria-hidden="true"></div>
 
-    <section style="margin-top:14px" class="grid cols-3">
-      <a class="card" href="machines.html">
+  <!-- New full-bleed tiles -->
+  <section class="home-tiles">
+    <a class="tile" href="machines.html" style="--img:url('assets/home/machines.jpg')">
+      <div class="tile-img" aria-hidden="true"></div>
+      <div class="tile-body">
         <h3>Machines</h3>
-        <p>Brand → Type → Model. Photos, video, catalog, live stock & price, and equivalents.</p>
-      </a>
-      <a class="card" href="projects.html">
+        <!--<p>Brand → Type → Model. Photos, video, catalog, live stock &amp; price, and equivalents.</p>!-->
+        <span class="tile-cta">Open →</span>
+      </div>
+    </a>
+
+    <a class="tile" href="projects.html" style="--img:url('assets/home/projects.jpg')">
+      <div class="tile-img" aria-hidden="true"></div>
+      <div class="tile-body">
         <h3>Projects</h3>
-        <p>Pre-built production lines. Step-wise machines with quick open to video/catalog.</p>
-      </a>
-      <a class="card" href="map.html">
+        <!--<p>Pre-built production lines. Step-wise machines with quick open to video/catalog.</p>!-->
+        <span class="tile-cta">Open →</span>
+      </div>
+    </a>
+
+    <a class="tile" href="map.html" style="--img:url('assets/home/map.jpg')">
+      <div class="tile-img" aria-hidden="true"></div>
+      <div class="tile-body">
         <h3>Map</h3>
-        <p>City/cluster view of where machines are running (aggregated, no customer names).</p>
-      </a>
-    </section>
+        <!--<p>City/cluster view of where machines are running (aggregated, no customer names).</p>!-->
+        <span class="tile-cta">Open →</span>
+      </div>
+    </a>
+  </section>
 
-    <div class="footer">Internal use only • Data shown is for HCA team</div>
-  </main>
+  <!--<div class="footer">Internal use only • Data shown is for HCA team</div>!-->
+</main>
 
-  <script src="assets/app.js"></script>
-  <script>
-    (async () => {
-      const machines = await loadData('data/machines.json');
-      const projects = await loadData('data/projects.json');
-      const installs = await loadData('data/installations.json');
+<!-- keep your existing app.js -->
+<script src="assets/app.js"></script>
 
-      const totalMachines = machines.length;
-      const totalProjects = projects.length;
-      const totalInstalls = installs.reduce((s,i)=>s+(i.count||0),0);
+<!-- Vanta NET -->
+<!-- THREE.js (required by Vanta) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 
-      const kpis = document.getElementById('kpis');
-      const items = [
-        {label:'Machines', value: totalMachines},
-        {label:'Projects', value: totalProjects},
-        {label:'Installations (agg.)', value: totalInstalls}
-      ];
-      kpis.innerHTML = items.map(x => `
-        <div class="kpi">
-          <div class="label">${safeText(x.label)}</div>
-          <div class="value">${safeText(x.value)}</div>
-        </div>
-      `).join('');
-    })().catch(err => {
-      console.error(err);
-      document.getElementById('kpis').innerHTML = '<div class="small">Failed to load data.</div>';
-    });
-  </script>
+<!-- Vanta NET -->
+<script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+
+<script>
+  document.body.classList.add("vanta-on");
+
+  VANTA.NET({
+    el: "#vanta-bg",
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+
+    color: 0x6aa7ff,
+    backgroundColor: 0x050712,
+    points: 9.0,
+    maxDistance: 18.0,
+    spacing: 14.0,
+    showDots: false
+  });
+</script>
+
+
 </body>
 </html>

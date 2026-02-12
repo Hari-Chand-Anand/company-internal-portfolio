@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-  <header class="topbar">
+ <!-- <header class="topbar">
     <div class="row">
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
@@ -24,7 +24,7 @@
       </nav>
       <button class="btn primary" id="copy">Copy link</button>
     </div>
-  </header>
+  </header> -->
 
   <main class="container">
     <section class="hero">
@@ -74,7 +74,7 @@
       const project = projects.find(p => p.id === id) || projects[0];
       if (!project) throw new Error('No project found');
 
-      // Defensive normalizers (prevents "Project not found" due to shape mistakes in JSON)
+      // Defensive norssmalizers (prevents "Project not found" due to shape mistakes in JSON)
       const asArray = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? [v] : []);
       const steps = asArray(project.steps);
 

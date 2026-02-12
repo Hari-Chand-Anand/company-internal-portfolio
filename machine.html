@@ -5,56 +5,380 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Machine • HCA Internal Portfolio</title>
   <link rel="stylesheet" href="assets/styles.css" />
-  <!-- 3D model viewer (GLB) -->
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    /* ---------- Font: IKAROS (put file in assets/fonts/) ---------- */
+    @font-face{
+      font-family:"Ikaros";
+      src:url("assets/fonts/ikaros.woff2") format("woff2"),
+          url("assets/fonts/ikaros.woff") format("woff");
+      font-weight:400;
+      font-style:normal;
+      font-display:swap;
+    }
+    :root{
+      --ui-font: Ikaros, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      /* Apple-like glass */
+      --glass: rgba(255,255,255,.035);
+      --glass-strong: rgba(255,255,255,.055);
+      --stroke: rgba(255,255,255,.12);
+      --stroke-soft: rgba(255,255,255,.10);
+      --shadow: 0 28px 90px rgba(0,0,0,.45);
+      --inner: inset 0 1px 0 rgba(255,255,255,.06);
+      --blur: blur(16px);
+    }
+
+    body{
+      font-family: var(--ui-font);
+      letter-spacing: 0.01em;
+      background: #050712; /* fallback */
+      position: relative;
+      overflow-x: hidden;
+    }
+    h1,h2,h3,.section-title,.label,.mv-title{ font-family: var(--ui-font); }
+
+    /* ---------- Subtle NET effect overlay (like other pages) ---------- */
+    /* Uses pure CSS so you don't need extra JS. It's subtle + performant. */
+    .net-overlay{
+      pointer-events:none;
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      opacity: .45;
+      mix-blend-mode: screen;
+      filter: saturate(1.1);
+      background:
+        radial-gradient(1200px 700px at 20% 25%, rgba(106,167,255,.22), transparent 62%),
+        radial-gradient(1000px 600px at 78% 55%, rgba(106,167,255,.16), transparent 64%),
+        radial-gradient(800px 520px at 45% 85%, rgba(106,167,255,.10), transparent 66%);
+    }
+    .net-overlay::before{
+      content:"";
+      position:absolute;
+      inset:-80px;
+      opacity:.18;
+      background:
+        repeating-linear-gradient(115deg,
+          rgba(106,167,255,.18) 0px,
+          rgba(106,167,255,.18) 1px,
+          transparent 1px,
+          transparent 78px
+        ),
+        repeating-linear-gradient(25deg,
+          rgba(106,167,255,.14) 0px,
+          rgba(106,167,255,.14) 1px,
+          transparent 1px,
+          transparent 92px
+        );
+      transform: translate3d(0,0,0);
+      animation: netDrift 18s linear infinite;
+    }
+    .net-overlay::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(900px 500px at 50% 15%, rgba(255,255,255,.05), transparent 60%);
+      opacity:.9;
+    }
+    @keyframes netDrift{
+      from{ transform: translate3d(-18px,-12px,0); }
+      to  { transform: translate3d(18px,12px,0); }
+    }
+
+    /* Keep content above overlay */
+    main{ position: relative; z-index: 1; }
+
+    /* ---------- Header pill ---------- */
+    .page-head{ margin-top: 16px; }
+    .top-pill{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:18px 22px;
+      border-radius:22px;
+      border:1px solid var(--stroke);
+      background: var(--glass);
+      box-shadow: var(--shadow), var(--inner);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+    }
+    .top-pill .title{
+      font-size: 26px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      opacity: .95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 60vw;
+    }
+    .top-pill .sub{
+      opacity:.74;
+      font-size: 13px;
+      text-align:right;
+      line-height: 1.4;
+      max-width: 42ch;
+    }
+
+    /* ---------- Layout (equal-height columns) ---------- */
+    .detail-wrap.equal-height{
+      display:grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap:18px;
+      margin-top: 18px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px){
+      .detail-wrap.equal-height{ grid-template-columns:1fr; }
+      .top-pill{ flex-direction:column; align-items:flex-start; }
+      .top-pill .sub{ text-align:left; max-width:none; }
+      .top-pill .title{ max-width:100%; }
+    }
+
+    /* ---------- Make cards more transparent + glassy ---------- */
+    /* Your base .card comes from assets/styles.css. We override softly. */
+    .card{
+      background: rgba(255,255,255,.028) !important;
+      border: 1px solid rgba(255,255,255,.10) !important;
+      box-shadow: 0 26px 90px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06) !important;
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+    }
+
+    /* Left column */
+    .equal-height > .card{
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+    }
+    .left-stack{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      flex:1;
+      min-height: 0;
+    }
+
+    .sub-card{
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+    }
+    .sub-card:hover{
+      border-color: rgba(255,255,255,.12);
+      background: rgba(255,255,255,.035);
+    }
+
+    .label{
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      opacity: .72;
+      margin-bottom: 10px;
+    }
+    .value{
+      font-size: 44px;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin: 0;
+    }
+
+    .muted{ opacity:.72; }
+    .desc{
+      margin:0;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    /* Actions pinned to bottom */
+    .actions-row{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:12px;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+    @media (max-width: 980px){
+      .actions-row{ grid-template-columns: 1fr; }
+    }
+
+    .action-tile{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      padding:14px 14px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.035);
+      text-decoration:none;
+      color:inherit;
+      cursor:pointer;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+      user-select:none;
+      font-weight: 650;
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+    }
+    .action-tile:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.055);
+      border-color: rgba(255,255,255,.16);
+      box-shadow: 0 18px 55px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .action-tile[aria-disabled="true"]{
+      opacity:.45;
+      pointer-events:none;
+      transform:none;
+      box-shadow:none;
+    }
+
+    /* Right column */
+    .right-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      margin-bottom: 10px;
+    }
+    .section-title{
+      margin:0;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      opacity:.72;
+    }
+
+    .spec-table{ width:100%; border-collapse:collapse; }
+    .spec-table tr{ border-top:1px solid rgba(255,255,255,.08); }
+    .spec-table td{ padding:14px 12px; vertical-align:top; }
+    .spec-table td:first-child{ opacity:.78; }
+    .spec-table td:last-child{ text-align:right; font-weight:650; }
+
+    /* Hide footer in this page */
+    .footer{ display:none; }
+
+    /* ---------- Modals ---------- */
+    .mv-modal{
+      position: fixed;
+      inset: 0;
+      display:none;
+      z-index: 9999;
+    }
+    .mv-modal.is-open{ display:block; }
+    .mv-backdrop{
+      position:absolute;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .mv-panel{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform: translate(-50%,-50%);
+      width:min(1100px, 92vw);
+      height:min(720px, 86vh);
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(10,14,22,.78);
+      box-shadow: 0 40px 140px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.06);
+      overflow:hidden;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .mv-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .mv-title{
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      opacity:.8;
+    }
+    .mv-close{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color:inherit;
+      border-radius: 12px;
+      padding: 8px 10px;
+      cursor:pointer;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .mv-close:hover{
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.18);
+      transform: translateY(-1px);
+    }
+  </style>
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="row">
-      <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <div>
-          <div class="title" id="mtitle">Machine</div>
-          <div class="subtitle" id="msub">Details, media, stock/price and equivalents</div>
-        </div>
-      </div>
-      <nav class="nav" aria-label="Primary">
-        <a href="index.html">Home</a>
-        <a href="machines.html">Machines</a>
-        <a href="projects.html">Projects</a>
-        <a href="map.html">Map</a>
-      </nav>
-      <button class="btn primary" id="copy">Copy link</button>
-    </div>
-  </header>
+  <!-- subtle “net” effect overlay (Apple-like glow + lines) -->
+  <div class="net-overlay" aria-hidden="true"></div>
 
   <main class="container">
-    <section class="hero">
-      <h1 id="h1">Loading…</h1>
-      <p id="desc"></p>
-      <div class="kpis" id="kpis"></div>
-    </section>
-
-    <section style="margin-top:14px" class="grid cols-2">
-      <div class="card">
-        <h3>Quick actions</h3>
-        <p class="small">Use these during customer visits.</p>
-        <div class="divider"></div>
-        <div class="actions" id="actions"></div>
-      </div>
-
-      <div class="card">
-        <h3>Equivalents / Alternatives</h3>
-        <p class="small">Similar machines across brands with live stock & price.</p>
-        <div class="divider"></div>
-        <div id="equivs"></div>
+    <section class="page-head">
+      <div class="top-pill">
+        <div class="title" id="h1">Loading…</div>
+        <div class="sub" id="desc"></div>
       </div>
     </section>
 
-    <section style="margin-top:14px" class="card">
-      <h3>Notes</h3>
-      <p class="small">You can expand this later to show full specs table, spares, and comparison view.</p>
+    <section class="detail-wrap equal-height">
+      <!-- LEFT COLUMN -->
+      <div class="card left-col">
+        <div class="left-stack">
+          <div class="sub-card">
+            <div class="label">Price</div>
+            <div class="value" id="priceVal">—</div>
+          </div>
+
+          <div class="sub-card">
+            <div class="label">Stock</div>
+            <div class="value" id="stockVal">—</div>
+          </div>
+
+          <div class="sub-card">
+            <p id="longDesc" class="desc muted" style="margin:0;"></p>
+          </div>
+
+          <div class="actions-row">
+            <a id="videoBtn" class="action-tile" href="#" target="_blank" rel="noreferrer">
+              <span>▶</span><span>Video</span>
+            </a>
+
+            <button id="openCatalogBtn" class="action-tile" type="button" title="Open catalog">
+              <span>📄</span><span>Catalog</span>
+            </button>
+
+            <button id="open3dBtn" class="action-tile" type="button" title="Open 3D model">
+              <span>⬡</span><span>3D Model</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="card right-col">
+        <div class="right-head">
+          <h3 class="section-title">Specifications</h3>
+        </div>
+        <div id="specWrap"></div>
+      </div>
     </section>
 
     <div class="footer">Internal use only</div>
@@ -62,7 +386,7 @@
 
   <script src="assets/app.js"></script>
 
-  <!-- 3D Viewer Modal (opens inside the same page) -->
+  <!-- 3D Modal -->
   <div id="viewerModal" class="mv-modal" aria-hidden="true">
     <div class="mv-backdrop" id="close3dBackdrop"></div>
     <div class="mv-panel" role="dialog" aria-modal="true" aria-label="3D Viewer">
@@ -70,22 +394,11 @@
         <div class="mv-title">3D View</div>
         <button class="mv-close" id="close3dBtn" type="button">✕</button>
       </div>
-
-      <model-viewer
-        id="mv"
-        src="assets/machine.glb"
-        alt="Machine 3D model"
-        camera-controls
-        auto-rotate
-        shadow-intensity="1"
-        exposure="1"
-        environment-image="neutral"
-        style="width:100%; height:100%; background:#0b0f17;">
-      </model-viewer>
+      <div id="mvMount" style="width:100%;height:calc(100% - 54px);background:#0b0f17;"></div>
     </div>
   </div>
 
-  <!-- Catalog Viewer Modal (opens inside the same page) -->
+  <!-- Catalog Modal -->
   <div id="catalogModal" class="mv-modal" aria-hidden="true">
     <div class="mv-backdrop" id="closeCatalogBackdrop"></div>
     <div class="mv-panel" role="dialog" aria-modal="true" aria-label="Catalog Viewer">
@@ -93,293 +406,204 @@
         <div class="mv-title" id="catalogTitle">Catalog</div>
         <button class="mv-close" id="closeCatalogBtn" type="button">✕</button>
       </div>
-
       <iframe
         id="catalogFrame"
         title="Catalog PDF"
         src=""
         loading="lazy"
-        style="width:100%; height:100%; border:0; background:#fff;"
+        style="width:100%; height:calc(100% - 54px); border:0; background:#fff;"
         allow="fullscreen">
       </iframe>
     </div>
   </div>
 
   <script>
-    // ---- helper: detect backend URL in Codespaces + local ----
-    function getApiBase() {
-      // Codespaces pattern: https://<name>-5500.app.github.dev
-      // Backend pattern:   https://<name>-3001.app.github.dev
-      const host = location.host;
-      const m = host.match(/-(\d+)\.app\.github\.dev$/);
-      if (m) {
-        return location.origin.replace(/-\d+\.app\.github\.dev$/, "-3001.app.github.dev");
-      }
-      // Local / normal
-      return `${location.protocol}//${location.hostname}:3001`;
+    const PRODUCTS_URL = "./products.json";
+    const DUKEJIA = "DUKEJIA";
+
+    // Demo fallbacks (lets you test UI even when URLs are missing)
+    const DEMO_CATALOG_PDF = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+    const DEMO_GLB = "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+
+    function youtubeWatchUrl(youtubeId) {
+      if (!youtubeId) return "";
+      const [id, rest] = String(youtubeId).split("&");
+      return `https://www.youtube.com/watch?v=${id}${rest ? "&" + rest : ""}`;
     }
 
-    async function fetchJson(url, opts) {
-      const res = await fetch(url, opts);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
-      return data;
+    // Convert Drive "view" links to "preview" so it opens inside iframe (same tab, modal)
+    function toPreview(url) {
+      if (!url) return "";
+      const s = String(url);
+      if (s.includes("/preview")) return s;
+      const m = s.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+      if (m && m[1]) return `https://drive.google.com/file/d/${m[1]}/preview`;
+      return s;
+    }
+
+    async function loadProducts() {
+      const res = await fetch(PRODUCTS_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load products.json");
+      const data = await res.json();
+
+      // Deduplicate by id
+      const seen = new Set();
+      const unique = [];
+      for (const p of data) {
+        const id = String(p.id || "").trim();
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        unique.push(p);
+      }
+
+      // Force brand DUKEJIA
+      return unique.map(p => ({ ...p, brand: DUKEJIA }));
+    }
+
+    async function ensureModelViewerScript() {
+      if (window.customElements && window.customElements.get("model-viewer")) return;
+      await new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.type = "module";
+        s.src = "https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js";
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
     }
 
     (async () => {
-      const API = getApiBase();
+      const id = getParam("id");
+      const products = await loadProducts();
+      const m = products.find(p => String(p.id) === String(id)) || products[0];
+      if (!m) throw new Error("Machine not found");
 
-      const id = getParam('id');
-      const machines = await loadData('data/machines.json');
-      const mById = new Map(machines.map(m => [m.id, m]));
+      document.title = `${m.brand} • ${m.model} • Machine`;
 
-      const m = mById.get(id) || machines[0];
-      if (!m) throw new Error('No machine found');
+      // Top pill text
+      $("#h1").textContent = `${m.brand} • ${m.model}`;
+      $("#desc").textContent = m.name || "";
 
-      // Clean brand/model so it matches Excel key
-      const cleanBrand = String(m.brand || "")
-        .replace(/[•·]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+      // Long description
+      $("#longDesc").textContent = m.description || "";
 
-      const cleanModel = String(m.model || "")
-        .replace(/\(.*?\)/g, "")   // removes (R-Nine)
-        .replace(/[•·]/g, " ")     // removes bullets if any
-        .replace(/\s+/g, " ")
-        .trim();
+      // Price
+      const priceInr = (m.priceINR != null) ? moneyINR(Number(m.priceINR)) : "—";
+      $("#priceVal").textContent = priceInr;
 
-      const MODEL_KEY = `${cleanBrand} ${cleanModel}`.trim();
-      console.log("MODEL_KEY sent to backend:", MODEL_KEY);
+      // Stock
+      const qty = (m.stockQty != null) ? Number(m.stockQty) : null;
+      $("#stockVal").textContent = (qty == null) ? "—" : String(qty);
 
-      document.title = `${m.brand} ${m.model} • Machines`;
-      $('#mtitle').textContent = `${m.brand} • ${m.model}`;
-      $('#h1').textContent = `${m.brand} • ${m.model}`;
-      $('#desc').textContent = m.short || '';
-
-      // KPI layout with placeholders we will update
-      $('#kpis').innerHTML = [
-        { label: 'Brand', value: m.brand },
-        { label: 'Type', value: m.type },
-        { label: 'Price', value: 'Loading…', id: 'kpiPrice' }
-      ].map(x => `
-        <div class="kpi">
-          <div class="label">${safeText(x.label)}</div>
-          <div class="value" ${x.id ? `id="${x.id}"` : ''}>${safeText(x.value)}</div>
-        </div>
-      `).join('');
-
-      // Admin-only box (hidden by default)
-      const adminBoxHtml = `
-        <div id="adminPriceBox" class="card" style="margin-top:12px; display:none;">
-          <h3 style="margin:0 0 6px 0;">Admin pricing</h3>
-          <div class="small">Visible only after login.</div>
-          <div class="divider"></div>
-          <div class="meta" style="gap:10px; flex-wrap:wrap;">
-            <span class="pill">Base Price: <b id="basePriceVal">—</b></span>
-            <span class="pill">FX_OVERRIDE: <b id="fxOverrideVal">—</b></span>
-          </div>
-        </div>
-      `;
-      $('#kpis').insertAdjacentHTML('afterend', adminBoxHtml);
-
-      // Actions: Catalog is a button (no new tab)
-      $('#actions').innerHTML = `
-        <a href="${safeText(m.videoUrl)}" target="_blank" rel="noreferrer">Video</a>
-        <button type="button" id="openCatalogBtn">Catalog</button>
-        <button type="button" id="open3dBtn">View 3D</button>
-        <button type="button" id="adminLoginBtn">Admin Login</button>
-        <a href="machines.html">Back to list</a>
-      `;
-
-      // ---- 1) Load public quote price and update KPI ----
-      async function loadPublicPrice() {
-        const url = `${API}/api/price/${encodeURIComponent(MODEL_KEY)}`;
-        console.log("Calling public price URL:", url);
-
-        try {
-          const res = await fetch(url);
-          const text = await res.text();
-
-          console.log("Status:", res.status);
-          console.log("Raw response:", text);
-
-          if (!res.ok) {
-            $('#kpiPrice').textContent = `ERR ${res.status}`;
-            return;
-          }
-
-          const data = JSON.parse(text);
-          const q = data.quote_price_inr;
-          $('#kpiPrice').textContent = q ? moneyINR(Number(q)) : "—";
-        } catch (e) {
-          console.error("Fetch failed:", e);
-          $('#kpiPrice').textContent = "FETCH FAIL";
-        }
+      // Specs
+      const spec = m.spec || {};
+      const entries = Object.entries(spec);
+      if (!entries.length) {
+        $("#specWrap").innerHTML = `<div class="muted" style="padding:10px 2px;">No specifications added.</div>`;
+      } else {
+        $("#specWrap").innerHTML = `
+          <table class="spec-table">
+            <tbody>
+              ${entries.map(([k,v]) => {
+                const val = Array.isArray(v) ? v.join(", ") : String(v);
+                return `<tr><td>${safeText(k)}</td><td>${safeText(val)}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        `;
       }
 
-      // ---- 2) Admin login (minimal password prompt) ----
-      async function adminLogin() {
-        const password = prompt("Enter admin password");
-        if (!password) return;
-
-        try {
-          const data = await fetchJson(`${API}/api/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password })
-          });
-
-          localStorage.setItem("hca_admin_token", data.token);
-          alert("Admin access enabled ✅");
-          await loadAdminPrice();
-        } catch (e) {
-          alert("Wrong password ❌");
-        }
+      // Video button
+      const videoUrl = youtubeWatchUrl(m.media && m.media.youtubeId) || m.videoUrl || "";
+      const videoBtn = $("#videoBtn");
+      if (videoUrl) {
+        videoBtn.href = videoUrl;
+        videoBtn.removeAttribute("aria-disabled");
+      } else {
+        videoBtn.setAttribute("aria-disabled","true");
+        videoBtn.title = "Video not available";
+        videoBtn.removeAttribute("href");
       }
 
-      // ---- 3) Load admin-only fields (Base + FX_OVERRIDE) ----
-      async function loadAdminPrice() {
-        const token = localStorage.getItem("hca_admin_token");
-        if (!token) {
-          $('#adminPriceBox').style.display = "none";
-          return;
-        }
+      // Catalog modal (same tab)
+      const catalogUrlReal = m.catalogUrl || m.catalogueUrl || m.catalog || "";
+      const openCatalogBtn = $("#openCatalogBtn");
+      const catalogModal = $("#catalogModal");
+      const catalogFrame = $("#catalogFrame");
 
-        try {
-          const data = await fetchJson(`${API}/api/admin/price/${encodeURIComponent(MODEL_KEY)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+      openCatalogBtn.addEventListener("click", () => {
+        const usingDemo = !catalogUrlReal;
+        $("#catalogTitle").textContent =
+          usingDemo ? `${m.brand} • ${m.model} Catalog (Demo)` : `${m.brand} • ${m.model} Catalog`;
 
-          $('#adminPriceBox').style.display = "block";
-          $('#basePriceVal').textContent = data.base_price ?? "—";
-          $('#fxOverrideVal').textContent = data.fx_override ?? "—";
-        } catch (e) {
-          $('#adminPriceBox').style.display = "none";
-        }
-      }
+        const finalCatalogUrl = usingDemo ? DEMO_CATALOG_PDF : toPreview(catalogUrlReal);
+        catalogFrame.src = finalCatalogUrl;
 
-      // bind admin login
-      $('#adminLoginBtn').addEventListener('click', adminLogin);
-
-      // ---- 3D Viewer ----
-      const modal3d = $('#viewerModal');
-      const mv = $('#mv');
-      const open3dBtn = $('#open3dBtn');
-      const close3dBtn = $('#close3dBtn');
-      const close3dBackdrop = $('#close3dBackdrop');
-
-      const glbSrc = (m && m.glbUrl) ? m.glbUrl : 'assets/machine.glb';
-      mv.setAttribute('src', glbSrc);
-
-      const open3d = () => {
-        modal3d.classList.add('is-open');
-        modal3d.setAttribute('aria-hidden', 'false');
-      };
-      const close3d = () => {
-        modal3d.classList.remove('is-open');
-        modal3d.setAttribute('aria-hidden', 'true');
-      };
-
-      open3dBtn.addEventListener('click', open3d);
-      close3dBtn.addEventListener('click', close3d);
-      close3dBackdrop.addEventListener('click', close3d);
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal3d.classList.contains('is-open')) close3d();
+        catalogModal.classList.add("is-open");
+        catalogModal.setAttribute("aria-hidden","false");
       });
-
-      // ---- Catalog Viewer (catalogUrl only; Drive view -> preview) ----
-      const catalogModal = $('#catalogModal');
-      const catalogFrame = $('#catalogFrame');
-      const openCatalogBtn = $('#openCatalogBtn');
-      const closeCatalogBtn = $('#closeCatalogBtn');
-      const closeCatalogBackdrop = $('#closeCatalogBackdrop');
-      const catalogTitle = $('#catalogTitle');
-
-      function toPreview(url) {
-        if (!url) return "";
-        const s = String(url);
-
-        // If already preview link, keep it
-        if (s.includes("/preview")) return s;
-
-        // Convert Google Drive "file/d/<id>/view" to ".../preview"
-        const match = s.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-        if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
-
-        // Otherwise use as-is (direct PDF URL also works)
-        return s;
-      }
-
-      function openCatalog() {
-        const src = toPreview(m.catalogUrl);
-        if (!src) {
-          alert("Catalog not available for this machine.");
-          return;
-        }
-        catalogTitle.textContent = `${m.brand} • ${m.model} Catalog`;
-        catalogFrame.src = src;
-
-        catalogModal.classList.add('is-open');
-        catalogModal.setAttribute('aria-hidden', 'false');
-      }
 
       function closeCatalog() {
-        catalogModal.classList.remove('is-open');
-        catalogModal.setAttribute('aria-hidden', 'true');
-        catalogFrame.src = ""; // unload
+        catalogModal.classList.remove("is-open");
+        catalogModal.setAttribute("aria-hidden","true");
+        catalogFrame.src = "";
       }
+      $("#closeCatalogBtn").addEventListener("click", closeCatalog);
+      $("#closeCatalogBackdrop").addEventListener("click", closeCatalog);
 
-      openCatalogBtn.addEventListener('click', openCatalog);
-      closeCatalogBtn.addEventListener('click', closeCatalog);
-      closeCatalogBackdrop.addEventListener('click', closeCatalog);
+      // 3D modal (same tab)
+      const glbUrlReal = m.glbUrl || m.model3dUrl || m.glb || "";
+      const open3dBtn = $("#open3dBtn");
+      const viewerModal = $("#viewerModal");
+      const mvMount = $("#mvMount");
 
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && catalogModal.classList.contains('is-open')) closeCatalog();
+      open3dBtn.addEventListener("click", async () => {
+        viewerModal.classList.add("is-open");
+        viewerModal.setAttribute("aria-hidden","false");
+
+        const finalGlb = glbUrlReal || DEMO_GLB;
+
+        mvMount.innerHTML = `<div class="muted" style="padding:14px;">Loading 3D viewer…</div>`;
+        await ensureModelViewerScript();
+
+        mvMount.innerHTML = `
+          <model-viewer
+            src="${safeText(finalGlb)}"
+            alt="Machine 3D model"
+            camera-controls
+            auto-rotate
+            shadow-intensity="1"
+            exposure="1"
+            environment-image="neutral"
+            style="width:100%; height:100%; background:#0b0f17;">
+          </model-viewer>
+        `;
       });
 
-      // Equivalents
-      const equivWrap = $('#equivs');
-      if (!m.equivalents || !m.equivalents.length) {
-        equivWrap.innerHTML = '<div class="small">No equivalents mapped yet.</div>';
-      } else {
-        equivWrap.innerHTML = m.equivalents.map(eid => {
-          const e = mById.get(eid);
-          if (!e) return `<div class="small">Unknown machine ID: ${safeText(eid)}</div>`;
-          const p = stockPill(e.stockQty);
-          return `
-            <a class="card" style="display:block; margin-bottom:10px" href="machine.html?id=${encodeURIComponent(e.id)}">
-              <h3>${safeText(e.brand)} • ${safeText(e.model)}</h3>
-              <p>${safeText(e.short || '')}</p>
-              <div class="divider"></div>
-              <div class="meta">
-                <span class="pill"><span class="dot ${p.cls}"></span>${safeText(p.label)}</span>
-                <span class="pill">${moneyINR(e.priceINR)}</span>
-              </div>
-            </a>
-          `;
-        }).join('');
+      function close3d() {
+        viewerModal.classList.remove("is-open");
+        viewerModal.setAttribute("aria-hidden","true");
+        mvMount.innerHTML = "";
       }
+      $("#close3dBtn").addEventListener("click", close3d);
+      $("#close3dBackdrop").addEventListener("click", close3d);
 
-      // Copy link
-      $('#copy').addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(location.href);
-          $('#copy').textContent = 'Copied ✓';
-          setTimeout(() => $('#copy').textContent = 'Copy link', 1200);
-        } catch {
-          alert('Copy failed. You can copy from browser address bar.');
+      // ESC closes modals
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (viewerModal.classList.contains("is-open")) close3d();
+          if (catalogModal.classList.contains("is-open")) closeCatalog();
         }
       });
-
-      // Load prices
-      await loadPublicPrice();
-      await loadAdminPrice();
 
     })().catch(err => {
       console.error(err);
-      $('#h1').textContent = 'Machine not found';
-      $('#desc').textContent = 'Check the URL or machines.json.';
+      $("#h1").textContent = "Machine not found";
+      $("#desc").textContent = "Check the URL or products.json.";
+      $("#longDesc").textContent = "";
+      $("#priceVal").textContent = "—";
+      $("#stockVal").textContent = "—";
+      $("#specWrap").innerHTML = `<div class="muted" style="padding:10px 2px;">Failed to load data.</div>`;
     });
   </script>
 </body>
